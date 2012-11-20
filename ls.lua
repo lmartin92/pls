@@ -103,7 +103,7 @@ function setup(args)
     local dir, plugin, recurse, plugin_path
 
     -- we require "directory", "plugins_path", "plugin", and "recurse"
-    -- or tell the user RTFM
+    -- or tell the user RTFM and exit
     if require_args(args, "directory", "plugins_path", "plugin", "recurse") then
         dir, plugin, recurse, plugin_path
             = path.expanduser(args.directory), args.plugin, args.recurse,
@@ -115,9 +115,15 @@ function setup(args)
         os.exit()
     end
 
+    -- return the required arguments back to the program for usage
     return dir, plugin, recurse, args
 end
 
+-- the lfs.attributes function had certain issue where attr == nil
+-- at times, this sets mode to unknown at the moment, this may not
+-- be proper way to handle it
+-- attributes (entry)
+--      entry,  the entire path to where the file to get attributes on
 function attributes(entry)
     local attr = lfs.attributes(entry)
     local ret = "unknown"
@@ -129,12 +135,31 @@ function attributes(entry)
     return { mode = ret }
 end
 
+-- this is the big one, it does all the important stuff
+-- ls (path, plugin, data, allowed_recurse, parent, curr_recursion)
+--      path,               the path which we will recursively list
+--      plugin,             the plugin to call on each entry in the path
+--      data,               data (arguments) to be passed to the plugin
+--      allowed_recurse,    how many times are we allowed to step
+--                          yet another level into the directory tree
+--                          -1 will cause infinite recursion, I hope :-)
+--      parent,             the path located directly above this one
+--      curr_recursion,     how many times we have recursed thus far
 function ls(path, plugin, data, allowed_recurse, parent, curr_recursion)
+    -- this is all the directories in this directory (attr(entry).mode)
     local dirs = {}
+    -- where we are in the recursion
     local recurse = curr_recursion
+    -- how many times the plugin has been applied
     local applied = 0
+    -- the real path of where we are
     local real_path = parent .. "/" .. path
 
+    -- itterate over every entry in this directory
+    -- if entry is a directory and is not this directory or the parent
+    -- add that to dirs, and call the plugin regardless of if this
+    -- is or isn't a directory, keeping track of if the plugin
+    -- applied itself to this entry
     for entry in lfs.dir(real_path) do
         if entry ~= "." and entry ~= ".." then
             local attr = attributes(real_path .. "/" .. entry)
@@ -146,6 +171,11 @@ function ls(path, plugin, data, allowed_recurse, parent, curr_recursion)
         end
     end
 
+    -- check if we are allowed further recursion,
+    -- and if so, list and apply on directories below us,
+    -- keeping track of how much further recursion is allowed
+    -- how many times the plugin applied itself
+    -- and how much recursion has been done
     if allowed_recurse ~= 0 then
         allowed_recurse = allowed_recurse - 1
         for k, v in ipairs(dirs) do
@@ -158,9 +188,13 @@ function ls(path, plugin, data, allowed_recurse, parent, curr_recursion)
         end
     end
 
+    -- return how many times we have applied the plugin
+    -- and how many levels of recursion have been done
     return applied, recurse
 end
 
+-- start the program, get required arguments
+-- call ls and let it proceed from there
 local dir, plugin, recurse, args = setup(getopt(arg))
 local applied, recursed = ls(dir, plugin, args, recurse, "", 0)
 print(plugin .. " applied to " .. applied .. " files.")
