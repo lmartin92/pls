@@ -24,6 +24,7 @@ local path  = require "pl.path"
 
 -- this is getopt as written by ShmuelZeigerman
 -- copied from http://lua-users.org/wiki/AlternativeGetOpt
+-- I can't comment this code as I don't know what it does
 function getopt( arg, options )
   local tab = {}
   for k, v in ipairs(arg) do
@@ -55,9 +56,19 @@ function getopt( arg, options )
   return tab
 end 
 
+-- require_args (args, vararg) 
+--      give it the args you require and it'll tell you if they are present
+--      args is a table returned from getopt
+--      vararg consists of args you wish to use
+--      example:
+--          require_args(args, "plugin", "dir")
+--          will return true if args["plugin"] and args["dir"] exist and are
+--          not nil, otherwise we return false
 function require_args(args, ...)
     ret = true
 
+    -- go over all the requirements, if one is nil, set ret to false and exit
+    -- loop
     for k, v in ipairs{...} do
         if args[v] == nil then
             ret = false
@@ -68,18 +79,31 @@ function require_args(args, ...)
     return ret
 end
 
+-- The entire ls program gest setup from here,
+-- all we do is give it a table returned from get_opt and
+-- it returns values we use through out the program
 function setup(args)
+    -- setup_path (plugin_path)
+    --      this function takes an argument (string) and adds it to
+    --      package.path so we can "require" stuff from there
     local function setup_path(plugin_path)
-        print(plugin_path)
-        plugin_path = path.expanduser(plugin_path)
+        plugin_path = path.expanduser(plugin_path) -- if contains ~, expand
+        -- need a / at the end of plugin path for correct package.path
         if plugin_path:sub(-1) ~= "/" then
             plugin_path = plugin_path .. "/"
         end
         package.path = package.path .. ";" .. plugin_path .. "?.lua"
     end
 
+    -- these are the values we return
+    -- dir,         the directory we will "ls" on
+    -- plugin,      the plugin we wish to apply
+    -- recurse,     the level of recursion to be allowed
+    -- plugin_path, where to look for plugins
     local dir, plugin, recurse, plugin_path
 
+    -- we require "directory", "plugins_path", "plugin", and "recurse"
+    -- or tell the user RTFM
     if require_args(args, "directory", "plugins_path", "plugin", "recurse") then
         dir, plugin, recurse, plugin_path
             = path.expanduser(args.directory), args.plugin, args.recurse,
@@ -137,7 +161,7 @@ function ls(path, plugin, data, allowed_recurse, parent, curr_recursion)
     return applied, recurse
 end
 
-local dir, plugin, recurse, args = setup(args.getopt(arg))
+local dir, plugin, recurse, args = setup(getopt(arg))
 local applied, recursed = ls(dir, plugin, args, recurse, "", 0)
 print(plugin .. " applied to " .. applied .. " files.")
 print("ls recursed " .. recursed .. " levels of directories.")
