@@ -45,3 +45,21 @@ You're probably thinking, "HEY, Where did all those extra arguments come from."
 Well, the plugin you use takes arguments, and if not present, it may not check
 or anything for that matter. That example showed how to use the rename plugin.
 That will possibly be explained seperately.
+
+Notes:
+Right now, limitations are that ls will likely crash if directory entries are
+modified by plugins. Need to make ls reentrant, and callable from plugins, and
+able to handle directory modifications. Thoughts on this are that plugins
+likely need to return a value indicating whether ls needs to be reset and ls
+would need to keep state on which entries have been applied and when
+a directory is added, removed or so on so as to be able to resume correctly at
+such points and continue ls'ing as appropriate.
+
+Another limitation is right now plugins can only be written in lua. Think we
+need a plugin that is capable of loading dynamic libraries and calling the
+dynlib's apply function and so on. Another plugin may yet need to be written to
+be able to call applications as well such that applications can be applied if
+they support a certain command line compatible with said plugin. This would
+make it way plugins can I guess be written in any language, and can be programs
+as well. For performance reasons or just because someone decides they want it
+that way.
