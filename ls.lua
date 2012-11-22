@@ -146,6 +146,16 @@ end
 --      parent,             the path located directly above this one
 --      curr_recursion,     how many times we have recursed thus far
 function ls(path, plugin, data, allowed_recurse, parent, curr_recursion)
+    -- setup real path
+    -- if parent is more than one character long, then use it
+    -- else use path
+    local function setup_real_path(parent, path)
+        local ret = path
+        if not (parent:len() < 1) then
+            ret = parent .. "/" .. path
+        end
+        return ret
+    end
     -- this is all the directories in this directory (attr(entry).mode)
     local dirs = {}
     -- where we are in the recursion
@@ -153,7 +163,7 @@ function ls(path, plugin, data, allowed_recurse, parent, curr_recursion)
     -- how many times the plugin has been applied
     local applied = 0
     -- the real path of where we are
-    local real_path = parent .. "/" .. path
+    local real_path = setup_real_path(parent, path) 
 
     -- itterate over every entry in this directory
     -- if entry is a directory and is not this directory or the parent
